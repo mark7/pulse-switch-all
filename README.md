@@ -1,4 +1,4 @@
-#pulse-switch-all
+# pulse-switch-all
 
 Curses program for the console to switch all playing streams to a different pulseaudio sink, and set the default for future streams to that sink.
 
