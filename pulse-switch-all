@@ -1,0 +1,41 @@
+#!/bin/bash
+#
+# Utility to permit switching the output used by PulseAudio.
+#
+# Switches all playing audio streams to a new sink, as well as setting
+# the default for new streams.
+#
+#
+declare -a sinknames
+declare -a sinkdescs
+
+while read -r sinkline; do
+    sinknames+=($(cut -d' ' -f1 <<< "$sinkline"))
+    sinkdescs+=("$(cut -d' ' -f2- <<< "$sinkline")")
+done < <(pactl list sinks|awk '/^[[:space:]]*Name/ {name=$2} /^[[:space:]]*Description/ {$1=""; print name $0}')
+
+dialog-config() {
+    local i
+    i=0
+    cat <<EOF
+--menu "Select a video source" 0 0 0
+EOF
+    for sink in "${sinkdescs[@]}"; do
+        echo "$i \"$sink\""
+        i=$(($i+1))
+    done
+}
+
+switch-source() {
+    sink="$1"
+    pacmd set-default-sink $sink >/dev/null 2>&1
+
+    for playing in $(pacmd list-sink-inputs | awk '$1 == "index:" {print $2}')
+    do
+        pacmd move-sink-input $playing $sink >/dev/null 2>&1
+    done
+}
+
+id=$(dialog --file <(dialog-config) 3>&1 1>&2 2>&3 3>&-)
+
+switch-source "${sinknames[$id]}"
